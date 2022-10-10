@@ -30,9 +30,11 @@ class FHIRValueSetSeeder extends Seeder
             "LinkType"=>"https://build.fhir.org/codesystem-link-type.json",
             "ProvenanceActivityType"=>["https://hl7.org/fhir/us/core/STU5/CodeSystem-us-core-provenance-participant-type.json","https://terminology.hl7.org/3.1.0/CodeSystem-provenance-participant-type.json"],
             "ProvenanceEntityRole"=>"https://build.fhir.org/codesystem-provenance-entity-role.json",
+            "ParticipationRoleType"=>["https://terminology.hl7.org/4.0.0/CodeSystem-provenance-participant-type.json","https://terminology.hl7.org/3.1.0/CodeSystem-extra-security-role-type.json"],
             "SecurityRoleType"=>"https://build.fhir.org/codesystem-sample-security-structural-roles.json",
             "PatientContactRelationship"=>"https://terminology.hl7.org/3.1.0/CodeSystem-v2-0131.json",
             "ResourceType"=>"https://build.fhir.org/codesystem-resource-types.json",
+            "SignatureTypeCodes"=>["https://build.fhir.org/codesystem-etsi-signature-type.json","https://build.fhir.org/codesystem-astm-signature-type.json"],
             "AllergyIntoleranceClinicalStatusCodes"=>"https://terminology.hl7.org/3.1.0/CodeSystem-allergyintolerance-clinical.json",
             "AllergyIntoleranceVerificationStatus"=>"https://terminology.hl7.org/3.1.0/CodeSystem-allergyintolerance-verification.json",
             "AllergyIntoleranceType"=>"https://build.fhir.org/codesystem-allergy-intolerance-type.json",
@@ -42,7 +44,6 @@ class FHIRValueSetSeeder extends Seeder
             "BirthSex"=>"https://terminology.hl7.org/3.1.0/CodeSystem-v3-AdministrativeGender.json",
             "RequestStatus"=>"https://build.fhir.org/codesystem-request-status.json",
             "CarePlanIntent"=>"https://www.hl7.org/fhir/codesystem-request-intent.json",
-            "CarePlanActivityKind"=>null,
             "CarePlanActivityStatus"=>"https://build.fhir.org/codesystem-care-plan-activity-status.json",
             "CareTeamStatus"=>"https://build.fhir.org/codesystem-care-team-status.json",
             "ConditionClinicalStatusCodes"=>"https://terminology.hl7.org/3.1.0/CodeSystem-condition-clinical.json",
@@ -50,12 +51,14 @@ class FHIRValueSetSeeder extends Seeder
             "UDIEntryType"=>"https://build.fhir.org/codesystem-udi-entry-type.json",
             "DeviceNameType"=>"https://build.fhir.org/codesystem-device-nametype.json",
             "FHIRDeviceStatus"=>"https://build.fhir.org/codesystem-device-status.json",
-            "FHIRDeviceStatusReason"=>"https://fhir-ru.github.io/codesystem-device-status-reason.json",
-            "FHIRDeviceSpecializationCategory"=>"https://build.fhir.org/codesystem-device-specialization-category.json",
-            "FHIRDeviceOperationalStatus"=>"https://build.fhir.org/codesystem-device-operationalstatus.json",
-            "DeviceRelationType"=>"https://build.fhir.org/codesystem-device-relationtype.json",
+            "FHIRDeviceStatusReason"=>"https://fhir-ru.github.io/codesystem-device-status-reason.json",            "FHIRDeviceSpecializationCategory"=>"https://build.fhir.org/codesystem-device-specialization-category.json",
+//            "FHIRDeviceOperationalStatus"=>"https://build.fhir.org/codesystem-device-operationalstatus.json", // No funciona
+            "DeviceRelationType"=>"https://build.fhir.org/branches/master/codesystem-devicedefinition-relationtype.json", // No funciona
             "DiagnosticReportStatus"=>"https://build.fhir.org/codesystem-diagnostic-report-status.json",
             "USCoreProvenancePaticipantTypeCodes"=>["https://hl7.org/fhir/us/core/STU4/CodeSystem-us-core-provenance-participant-type.json","https://terminology.hl7.org/1.0.0//CodeSystem-provenance-participant-type.json"],
+
+
+
             "DocumentReferenceStatus"=>"https://build.fhir.org/codesystem-document-reference-status.json",
             "CompositionStatus"=>"https://build.fhir.org/codesystem-composition-status.json",
             "USCoreDocumentReferenceCategory"=>"https://hl7.org/fhir/us/core/STU4/CodeSystem-us-core-documentreference-category.json",
@@ -107,12 +110,13 @@ class FHIRValueSetSeeder extends Seeder
             "CarePlanActivityStatusReason"=>["https://terminology.hl7.org/3.1.0/CodeSystem-medicationrequest-status-reason.json",]
         ];
 
+
         $valueSet= new FHIRValueSet();
 
         foreach ($valuesets as $key=>$value)
             $valueSet->create([
                 "name"=>$key,
-                "url"=>json_encode($value)
+                "url"=>$value,
             ]);
     }
 }

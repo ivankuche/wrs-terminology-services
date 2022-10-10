@@ -16,7 +16,7 @@ return new class extends Migration
         Schema::create('f_h_i_r_value_sets', function (Blueprint $table) {
             $table->id();
             $table->string("name");
-            $table->json("url");
+            $table->json("url")->nullable();
             $table->timestamps();
         });
     }

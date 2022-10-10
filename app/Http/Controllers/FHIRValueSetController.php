@@ -22,12 +22,90 @@ class FHIRValueSetController extends Controller
         return $return;
     }
 
+    /*
+        Start special cases
+    */
+    private function specialCaseBirthSex(&$options,$Term,&$urlsMeta) {
+        $this->addCustomValues($options,
+            "https://terminology.hl7.org/3.1.0/CodeSystem-v3-NullFlavor.json",
+            ["UNK","ASKU"],
+            $Term,
+            $urlsMeta);
+    }
+
+    private function specialCaseCarePlanActivityKind(&$options,$Term,&$urlsMeta) {
+        $this->addCustomValues($options,
+            "https://www.hl7.org/fhir/codesystem-resource-types.json",
+            ["Appointment","CommunicationRequest","DeviceRequest","MedicationRequest","NutritionOrder",
+                "Task","ServiceRequest","VisionPrescription"],
+            $Term,
+            $urlsMeta);
+    }
+
+    private function specialCaseCarePlanActivityStatusReason(&$options,$Term,&$urlsMeta) {
+        $this->addCustomValues($options,
+            "https://terminology.hl7.org/3.1.0/CodeSystem-v3-ActReason.json",
+            ["IMMUNE","MEDPREC","OSTOCK","PATOBJ","PHILISOP","RELIG","VACEFF","VACSAF"],
+            $Term,
+            $urlsMeta);
+    }
+
+    private function specialCaseParticipationRoleType(&$options,$Term,&$urlsMeta)
+    {
+
+        // NEMA
+        $url="ftp://medical.nema.org/medical/dicom/resources/valuesets/fhir/json/ValueSet-dicom-cid-402-AuditActiveParticipantRoleIDCode.json";
+
+        $content= file_get_contents($url);
+        $data= json_decode(str_replace("\n","",$content))->compose->include[0];
+        $data->id= "ParticipationRoleType-NEMA";
+
+
+        $this->addCustomValues($options,
+        "",
+        ["110150","110151","110152","110153","110154","110155"],
+        $Term,
+        $urlsMeta,$data);
+    }
+
+    /*
+        End special cases
+    */
+
+    private function specialCases($ValueSet,$Term,&$options,&$urlsMeta)
+    {
+            // Special cases where extra info must be placed. All cases must be in lower case.
+            switch ($ValueSet)
+            {
+
+                case "birthsex":
+                    $this->specialCaseBirthSex($options,$Term,$urlsMeta);
+                    break;
+
+                case "careplanactivitykind":
+                    $this->specialCaseCarePlanActivityKind($options,$Term,$urlsMeta);
+                    break;
+
+                case "careplanactivitystatusreason":
+                    $this->specialCaseCarePlanActivityStatusReason($options,$Term,$urlsMeta);
+                    break;
+
+                case "participationroletype":
+                    $this->specialCaseParticipationRoleType($options,$Term,$urlsMeta);
+                    break;
+
+            }
+
+    }
+
     public function getValueSet($ValueSet,$Term=null,$Sort=null)
     {
         $dbValueSets= new FHIRValueSet();
-        $valuesets= $this->valuesetMapper($dbValueSets->all()->toArray());
+        $ValueSet= strtolower($ValueSet); // ValueSet name is set to lower case
+        $valuesets= array_change_key_case($this->valuesetMapper($dbValueSets->all()->toArray())); // List of ValueSets is set to lower case
 
-        if (array_key_exists($ValueSet,$valuesets))
+
+        if (array_key_exists(strtolower($ValueSet),$valuesets))
         {
             $client = new Client();
             $options= [];
@@ -65,53 +143,376 @@ class FHIRValueSetController extends Controller
 
             }
 
-            // Special cases where extra info must be placed
-            switch ($ValueSet)
-            {
-
-                case "BirthSex":
-
-                    $this->addCustomValues($options,
-                        "https://terminology.hl7.org/3.1.0/CodeSystem-v3-NullFlavor.json",
-                        ["UNK"],
-                        $Term,
-                        $urlsMeta);
-
-                    break;
-
-                case "CarePlanActivityKind":
-                    $this->addCustomValues($options,
-                        "https://www.hl7.org/fhir/codesystem-resource-types.json",
-                        ["Appointment","CommunicationRequest","DeviceRequest","MedicationRequest","NutritionOrder",
-                            "Task","ServiceRequest","VisionPrescription"],
-                        $Term,
-                        $urlsMeta);
-
-                    break;
-
-                case "CarePlanActivityStatusReason":
-                    $this->addCustomValues($options,
-                        "https://terminology.hl7.org/3.1.0/CodeSystem-v3-ActReason.json",
-                        ["IMMUNE","MEDPREC","OSTOCK","PATOBJ","PHILISOP","RELIG","VACEFF","VACSAF"],
-                        $Term,
-                        $urlsMeta);
-
-
-                    break;
-            }
+            $this->specialCases($ValueSet,$Term,$options,$urlsMeta);
 
             if ($Sort!=null)
                 $options= collect($options)->sortBy($Sort,SORT_STRING)->values();
 
 
             unset($body->concept,$body->text);
-            return [
+            return dd([
                 "meta"=>$urlsMeta,
                 "data"=>$options
-            ];
+            ]);
+        }
+        else
+        {
+            // Custom methods
+            if (method_exists($this,$ValueSet))
+            {
+                return $this->{$ValueSet}();
+            }
         }
 
         throw new NotFoundHttpException("ValueSet not found");
+    }
+
+
+    private function MimeType() {
+        $mimeTypes= [];
+        // Retrieved from IANA
+        $sources= ["https://www.iana.org/assignments/media-types/application.csv",
+            "https://www.iana.org/assignments/media-types/audio.csv",
+            "https://www.iana.org/assignments/media-types/font.csv",
+            "https://www.iana.org/assignments/media-types/image.csv",
+            "https://www.iana.org/assignments/media-types/message.csv",
+            "https://www.iana.org/assignments/media-types/model.csv",
+            "https://www.iana.org/assignments/media-types/multipart.csv",
+            "https://www.iana.org/assignments/media-types/text.csv",
+            "https://www.iana.org/assignments/media-types/video.csv"];
+
+        $client = new Client();
+
+        foreach ($sources as $source)
+        {
+
+            $response = $client->get($source);
+
+            if ($response->getStatusCode()==200)
+            {
+                $lineNumber=1;
+                $separator = "\r\n";
+                $line = strtok($response->getBody()->getContents(), $separator);
+
+                while ($line !== false) {
+                    // Ignore first 2 lines (headers and empty line)
+                    if ($lineNumber>=3)
+                    {
+
+                        $data= explode(",",$line);
+                        $mimeTypes[]= [
+                            "definition"=>$data[1],
+                            "value"=>$data[0],
+                            "name"=>$data[1],
+                        ];
+                    }
+                    # do something with $line
+                    $line = strtok( $separator );
+                    $lineNumber++;
+
+                }
+
+            }
+            else
+                throw new InternalErrorException($response->getStatusCode());
+
+        }
+
+        return $mimeTypes;
+    }
+
+    private function CommonLanguages() {
+
+        //
+        $commonLanguages= [];
+        $meta= "";
+
+        $client = new Client();
+        // Retrieved from IANA
+        $response = $client->get("https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry");
+
+
+        if ($response->getStatusCode()==200)
+        {
+            $content= $response->getBody()->getContents();
+
+            $meta= str_replace("\n","",substr($content,0,strpos($content,"\n")+1));
+
+            // Remove first line
+            $content= substr($content,strpos($content,"\n")+1);
+            $commonLanguages= [];
+
+            $items= explode("%%\n",$content);
+            foreach ($items as $item)
+            {
+                if ($item!="")
+                {
+                    $arrayItems= explode("\n",$item);
+                    $tmpArray= [];
+                    foreach ($arrayItems as $value)
+                    {
+                        if (trim($value)!="")
+                        {
+                            $tmpValue= explode(":",$value);
+
+                            if (count($tmpValue)<2)
+                                $tmpArray[array_keys($tmpArray)[count($tmpArray)-1]].= $value;
+                            else
+                                $tmpArray[$tmpValue[0]]= trim($tmpValue[1]);
+                        }
+                    }
+
+                    $commonLanguages[]= $tmpArray;
+
+                }
+            }
+
+        }
+        else
+            throw new InternalErrorException($response->getStatusCode());
+
+
+
+        return ["meta"=>$meta,
+                "data"=>$commonLanguages];
+    }
+
+    private function OmbRaceCategories($Term=null) {
+
+        $raceCategories= [];
+        $meta= [];
+
+        // Get info from UMLS
+        $APIkey= "3bcb695f-b6ef-4291-9939-3b8a7c7c869c"; //Replace with WRS corresponding one
+
+        $client = new Client();
+
+        $urls= ["https://cts.nlm.nih.gov/fhir/ValueSet/2.16.840.1.114222.4.11.836"];
+
+        foreach ($urls as $url)
+        {
+            $response = $client->get($url, ["auth"=>['apikey',$APIkey]]);
+
+            if ($response->getStatusCode()==200)
+            {
+                $data= json_decode($response->getBody()->getContents());
+                $meta[$url]= [
+                    "url"=> $data->url,
+                    "version"=>$data->version,
+                    "date"=>$data->date
+                ];
+
+                foreach ($data->compose->include as $include)
+                {
+                    foreach ($include->concept as $concept)
+                    {
+                        $raceCategories[]= [
+                            "definition" => $concept->display,
+                            "value" => $concept->code,
+                            "name" => $concept->display,
+                            "source" => $url
+                        ];
+                    }
+                }
+
+           }
+        }
+
+
+        $this->addCustomValues($raceCategories,
+            "https://terminology.hl7.org/3.1.0/CodeSystem-v3-NullFlavor.json",
+            ["UNK","ASKU"],
+            $Term,
+            $meta);
+
+        return ["meta"=>$meta,
+            "data"=>$raceCategories];
+    }
+
+    private function CarePlanActivityKind($Term=null)
+    {
+        $activitiesPlan= [];
+        $meta= [];
+
+        $client = new Client();
+
+        $urls= ["http://hl7.org/fhir/R4/valueset-care-plan-activity-kind.json"];
+
+        foreach ($urls as $url)
+        {
+            $response = $client->get($url);
+
+            if ($response->getStatusCode()==200)
+            {
+                $data= json_decode($response->getBody()->getContents());
+                $meta[$url]= [
+                    "url"=> $data->url,
+                    "version"=>$data->version,
+                    "date"=>$data->date
+                ];
+
+                foreach ($data->compose->include as $include)
+                {
+                    foreach ($include->concept as $concept)
+                    {
+                        $activitiesPlan[]= [
+                            "definition" => (isset($concept->display)?$concept->display:$concept->code),
+                            "value" => $concept->code,
+                            "name" => (isset($concept->display)?$concept->display:$concept->code),
+                            "source" => $url
+                        ];
+                    }
+                }
+
+           }
+        }
+
+
+        return ["meta"=>$meta,
+            "data"=>$activitiesPlan];
+
+
+        $this->addCustomValues($raceCategories,
+            "https://terminology.hl7.org/3.1.0/CodeSystem-v3-NullFlavor.json",
+            ["UNK","ASKU"],
+            $Term,
+            $meta);
+
+        return ["meta"=>$meta,
+            "data"=>$raceCategories];
+
+    }
+
+    private function LoincBasicAPISearch($codes)
+    {
+        $dataReturned= [];
+        $meta= [];
+
+        $client = new Client();
+
+        $loincAPIUrlMeta= "https://fhir.loinc.org/CodeSystem/?url=http://loinc.org";
+        $response = $client->get($loincAPIUrlMeta,["auth"=>[env("USER_LOINC"),env("PASS_LOINC")],"header"=>["Accept"=>"application/json"]]);
+
+        if ($response->getStatusCode()==200)
+        {
+            $data= json_decode($response->getBody()->getContents());
+
+
+            $meta[$data->entry[1]->fullUrl]= [
+                "url"=> $data->entry[1]->fullUrl,
+                "version"=>$data->entry[1]->resource->version,
+                "date"=>$data->entry[1]->resource->meta->lastUpdated
+            ];
+        }
+
+
+        $loincAPIUrl= "https://fhir.loinc.org/CodeSystem/\$lookup?system=http://loinc.org&code=";
+
+        foreach ($codes as $code)
+        {
+            // WRS must have it's own LOINC registered user
+            $response = $client->get($loincAPIUrl.$code,["auth"=>[env("USER_LOINC"),env("PASS_LOINC")]]);
+
+            if ($response->getStatusCode()==200)
+            {
+                $data= json_decode($response->getBody()->getContents());
+
+                $resultset= [];
+                foreach ($data->parameter as $parameter)
+                {
+                    if (isset($parameter->valueString))
+                        $resultset[$parameter->name]= $parameter->valueString;
+                }
+
+                $dataReturned[]= [
+                    "definition" => $resultset["display"],
+                    "value" => $resultset["display"],
+                    "name" => $resultset["display"],
+                    "source" => array_keys($meta)[0]
+
+                ];
+           }
+        }
+
+
+        return ["meta"=>$meta,
+            "data"=>$dataReturned];
+
+    }
+
+    private function USCoreDiagnosticReportCategory($Term=null)
+    {
+        return $this->LoincBasicAPISearch(["LP29684-5","LP29708-2","LP7839-6"]);
+    }
+
+    private function CareTeamCategory($Term=null)
+    {
+        return $this->LoincBasicAPISearch(["LA27975-4","LA27976-2","LA27977-0","LA27978-8","LA28865-6","LA28866-4","LA27980-4","LA28867-2"]);
+    }
+
+
+    // PENDING
+    private function DetailedRace($Term=null) // PENDING
+    {
+        $raceCategories= [];
+        $meta= [];
+
+        // Get info from UMLS
+        $APIkey= "3bcb695f-b6ef-4291-9939-3b8a7c7c869c"; //Replace with WRS corresponding one
+
+        $client = new Client();
+
+        $urls= ["http://cts.nlm.nih.gov/fhir/ValueSet/2.16.840.1.113883.1.11.14914"];
+
+
+        /*
+        Import all the codes that are contained in http://cts.nlm.nih.gov/fhir/ValueSet/2.16.840.1.113883.1.11.14914
+        Import all the codes that are contained in http://cts.nlm.nih.gov/fhir/ValueSet/2.16.840.1.113762.1.4.1021.103
+        This value set excludes codes based on the following rules:
+
+        Import all the codes that are contained in http://cts.nlm.nih.gov/fhir/ValueSet/2.16.840.1.113883.3.2074.1.1.3
+        */
+
+        foreach ($urls as $url)
+        {
+            $response = $client->get($url, ["auth"=>['apikey',$APIkey]]);
+
+            if ($response->getStatusCode()==200)
+            {
+                $data= json_decode($response->getBody()->getContents());
+                dd($data);
+                $meta[$url]= [
+                    "url"=> $data->url,
+                    "version"=>$data->version,
+                    "date"=>$data->date
+                ];
+
+                foreach ($data->compose->include as $include)
+                {
+                    foreach ($include->concept as $concept)
+                    {
+                        $raceCategories[]= [
+                            "definition" => $concept->display,
+                            "value" => $concept->code,
+                            "name" => $concept->display,
+                            "source" => $url
+                        ];
+                    }
+                }
+
+            }
+        }
+
+
+        $this->addCustomValues($raceCategories,
+            "https://terminology.hl7.org/3.1.0/CodeSystem-v3-NullFlavor.json",
+            ["UNK","ASKU"],
+            $Term,
+            $meta);
+
+        return dd(["meta"=>$meta,
+            "data"=>$raceCategories]);
+
     }
 
     private function recursiveFilling($Source,$SourceID,&$Destination,$Term)
@@ -177,53 +578,66 @@ class FHIRValueSetController extends Controller
 
     }
 
-    private function addCustomValues(&$SourceValues,$url,$customValues,$Term,&$Meta)
+    private function addCustomValues(&$SourceValues,$url,$customValues,$Term,&$Meta,$providedJSON=null)
     {
 
-        $client = new Client();
-        $response = $client->get($url);
-
-        if ($response->getStatusCode()==200)
+        if ($providedJSON==null)
         {
-            // Lower case of the Custom Values
-            $search_array = array_map('strtolower', $customValues);
-            $body= json_decode($response->getBody());
+            $client = new Client();
+            $response = $client->get($url);
 
-
-            $body= json_decode($response->getBody());
-            $concepts= $body->concept;
-            unset($body->concept,$body->text);
-
-            foreach ($customValues as $customValue)
+            if ($response->getStatusCode()==200)
             {
-                $concept= $this->findRecursiveElement($concepts,"code",$customValue,$body->id);
+                // Lower case of the Custom Values
+                $body= json_decode($response->getBody());
+                $concepts= $body->concept;
+                unset($body->concept,$body->text);
+            }
+            else
+                throw new InternalErrorException($response->getStatusCode());
 
-                if ($concept!=[])
+        }
+        else{
+            $body= $providedJSON;
+            $concepts= $providedJSON->concept;
+            unset($providedJSON->concept,$providedJSON->text);
+        }
+
+
+        $search_array = array_map('strtolower', $customValues);
+
+        foreach ($customValues as $customValue)
+        {
+            $concept= $this->findRecursiveElement($concepts,"code",$customValue,$body->id);
+
+            if ($concept!=[])
+            {
+                $insert= true;
+
+                if (($Term!=null) && ($Term!="*"))
                 {
-                    $insert= true;
+                    if (strpos(strtolower($concept["value"]),strtolower($Term))===false)
+                        $insert= false;
+                }
 
-                    if (($Term!=null) && ($Term!="*"))
-                    {
-                        if (strpos(strtolower($concept["value"]),strtolower($Term))===false)
-                            $insert= false;
-                    }
-
-                    if ($insert)
-                    {
-                        $SourceValues[] = $concept;
-                        $Meta[$body->id]= $body;
-                    }
+                if ($insert)
+                {
+                    $SourceValues[] = $concept;
+                    $Meta[$body->id]= $body;
                 }
             }
         }
-        else
-            throw new InternalErrorException($response->getStatusCode());
 
     }
 
     public function getMethods()
     {
-        return array_keys($valuesets);
+        $valueSets= new FHIRValueSet();
+        $response= [];
+        foreach ($valueSets->all(["name"])->toArray() as $valueset)
+            $response[]= $valueset["name"];
+
+        return $response;
     }
 
 }
