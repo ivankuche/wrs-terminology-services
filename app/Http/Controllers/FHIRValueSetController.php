@@ -7,7 +7,9 @@ use Exception;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use GuzzleHttp\Client;
+use ReflectionMethod;
 use Symfony\Component\CssSelector\Exception\InternalErrorException;
+use ReflectionClass;
 
 class FHIRValueSetController extends Controller
 {
@@ -68,6 +70,15 @@ class FHIRValueSetController extends Controller
         $urlsMeta,$data);
     }
 
+
+    private function specialCaseUSCoreConditionCategoryCodes(&$options,$Term,&$urlsMeta) {
+        $this->addCustomValues($options,
+            "http://hl7.org/fhir/us/core/STU5/CodeSystem-condition-category.json",
+            ["health-concern"],
+            $Term,
+            $urlsMeta);
+    }
+
     /*
         End special cases
     */
@@ -94,11 +105,15 @@ class FHIRValueSetController extends Controller
                     $this->specialCaseParticipationRoleType($options,$Term,$urlsMeta);
                     break;
 
+                case "uscoreconditioncategorycodes":
+                    $this->specialCaseUSCoreConditionCategoryCodes($options,$Term,$urlsMeta);
+                    break;
+
             }
 
     }
 
-    public function getValueSet($ValueSet,$Term=null,$Sort=null)
+    public function getResults($ValueSet,$Term=null,$Sort=null)
     {
         $dbValueSets= new FHIRValueSet();
         $ValueSet= strtolower($ValueSet); // ValueSet name is set to lower case
@@ -150,10 +165,10 @@ class FHIRValueSetController extends Controller
 
 
             unset($body->concept,$body->text);
-            return dd([
+            return [
                 "meta"=>$urlsMeta,
                 "data"=>$options
-            ]);
+            ];
         }
         else
         {
@@ -168,7 +183,137 @@ class FHIRValueSetController extends Controller
     }
 
 
-    private function MimeType() {
+    private final function ImmunizationStatusReasonCodes ()
+    {
+        $meta= [];
+        $data= [];
+
+        $this->addCustomValues($data,
+            "https://terminology.hl7.org/4.0.0/CodeSystem-v3-ActReason.json",
+            ["IMMUNE","OSTOCK","MEDPREC","PATOBJ", "PHILISOP","RELIG","VACEFF","VACSAF"],
+            null,
+            $meta);
+
+        return [
+            "meta"=>$meta,
+            "data"=>$data,
+        ];
+    }
+
+    private final function ImmunizationStatusCodes()
+    {
+        $meta= [];
+        $data= [];
+
+        $this->addCustomValues($data,
+            "http://hl7.org/fhir/R4B/codesystem-event-status.json",
+            ["entered-in-error","not-done"],
+            null,
+            $meta);
+
+        return [
+            "meta"=>$meta,
+            "data"=>$data,
+        ];
+
+    }
+
+    private final function ImmunizationOriginCodes()
+    {
+        $meta= [];
+        $data= [];
+
+        $this->addCustomValues($data,
+            "https://terminology.hl7.org/4.0.0/CodeSystem-immunization-origin.json",
+            ["provider","record","recall","school"],
+            null,
+            $meta);
+
+        return [
+            "meta"=>$meta,
+            "data"=>$data,
+        ];
+    }
+
+    private final function USCoreObservationSmokingStatusStatus()
+    {
+        $meta= [];
+        $data= [];
+
+        $this->addCustomValues($data,
+            "http://hl7.org/fhir/R4/codesystem-observation-status.json",
+            ["final","entered-in-error"],
+            null,
+            $meta);
+        return [
+            "meta"=>$meta,
+            "data"=>$data,
+        ];
+    }
+
+    private final function SpecialCourtesy()
+    {
+
+        $meta= [];
+        $data= [];
+
+        $this->addCustomValues($data,
+            "https://terminology.hl7.org/4.0.0/CodeSystem-v3-EncounterSpecialCourtesy.json",
+            ["EXT","NRM", "PRF", "STF", "VIP"],
+//            ["final","entered-in-error"],
+            null,
+            $meta);
+
+        $this->addCustomValues($data,
+            "https://terminology.hl7.org/3.1.0/CodeSystem-v3-NullFlavor.json",
+            ["UNK"],
+            null,
+            $meta);
+
+
+
+
+        return dd([
+            "meta"=>$meta,
+            "data"=>$data,
+        ]);
+    }
+
+
+    private final function ImmunizationRouteCodes()
+    {
+        $meta= [];
+        $data= [];
+
+        $this->addCustomValues($data,
+            "https://terminology.hl7.org/4.0.0/CodeSystem-v3-RouteOfAdministration.json",
+            ["IDINJ","IM","IVINJ","PO","SQ","TRNSDERM"],
+            null,
+            $meta);
+        return [
+            "meta"=>$meta,
+            "data"=>$data,
+        ];
+    }
+
+    private final function ImmunizationFunctionCodes()
+    {
+        $meta= [];
+        $data= [];
+
+        $this->addCustomValues($data,
+            "https://terminology.hl7.org/4.0.0/CodeSystem-v2-0443.json",
+            ["AP","OP"],
+            null,
+            $meta);
+        return dd([
+            "meta"=>$meta,
+            "data"=>$data,
+        ]);
+    }
+
+
+    private final function MimeType() {
         $mimeTypes= [];
         // Retrieved from IANA
         $sources= ["https://www.iana.org/assignments/media-types/application.csv",
@@ -204,6 +349,7 @@ class FHIRValueSetController extends Controller
                             "definition"=>$data[1],
                             "value"=>$data[0],
                             "name"=>$data[1],
+                            "source"=>"iana-mimetypes"
                         ];
                     }
                     # do something with $line
@@ -218,10 +364,14 @@ class FHIRValueSetController extends Controller
 
         }
 
-        return $mimeTypes;
+        $meta["iana-mimetypes"]= [];
+
+        return ["meta"=>$meta,
+                "data"=>$mimeTypes];
+
     }
 
-    private function CommonLanguages() {
+    private final function CommonLanguages() {
 
         //
         $commonLanguages= [];
@@ -235,8 +385,10 @@ class FHIRValueSetController extends Controller
         if ($response->getStatusCode()==200)
         {
             $content= $response->getBody()->getContents();
+            $meta= [];
 
-            $meta= str_replace("\n","",substr($content,0,strpos($content,"\n")+1));
+            $tmpData= explode(":",str_replace("\n","",substr($content,0,strpos($content,"\n")+1)));
+            $meta["common_languages"]= [$tmpData[0]=>$tmpData[1]];
 
             // Remove first line
             $content= substr($content,strpos($content,"\n")+1);
@@ -262,6 +414,8 @@ class FHIRValueSetController extends Controller
                         }
                     }
 
+                    $tmpArray["source"]="common_languages";
+
                     $commonLanguages[]= $tmpArray;
 
                 }
@@ -277,7 +431,25 @@ class FHIRValueSetController extends Controller
                 "data"=>$commonLanguages];
     }
 
-    private function OmbRaceCategories($Term=null) {
+    private final function CodesForImmunizationSiteOfAdministration () {
+        $meta= [];
+        $data= [];
+
+        $this->addCustomValues($data,
+            "https://terminology.hl7.org/4.0.0/CodeSystem-v3-ActSite.json",
+            ["LA","RA"],
+            null,
+            $meta);
+
+        return [
+            "meta"=>$meta,
+            "data"=>$data,
+        ];
+
+    }
+
+
+    private final function OmbRaceCategories($Term=null) {
 
         $raceCategories= [];
         $meta= [];
@@ -329,7 +501,7 @@ class FHIRValueSetController extends Controller
             "data"=>$raceCategories];
     }
 
-    private function CarePlanActivityKind($Term=null)
+    private final function CarePlanActivityKind($Term=null)
     {
         $activitiesPlan= [];
         $meta= [];
@@ -371,25 +543,79 @@ class FHIRValueSetController extends Controller
         return ["meta"=>$meta,
             "data"=>$activitiesPlan];
 
-
-        $this->addCustomValues($raceCategories,
-            "https://terminology.hl7.org/3.1.0/CodeSystem-v3-NullFlavor.json",
-            ["UNK","ASKU"],
-            $Term,
-            $meta);
-
-        return ["meta"=>$meta,
-            "data"=>$raceCategories];
-
     }
 
-    private function LoincBasicAPISearch($codes)
+    private final function USCoreDocumentReferenceType()
+    {
+        return $this->LOINCRetrieveAll(["SCALE_TYP"=>"DOC"]);
+    }
+
+    private final function USCoreDiagnosticReportLabCodes()
+    {
+        $return= $this->LOINCRetrieveAll(["CLASSTYPE"=>"1"]);
+        $this->addCustomValues($return["data"],
+            "https://terminology.hl7.org/3.1.0/CodeSystem-v3-NullFlavor.json",
+            ["UNK","ASKU"],
+            null,
+            $return["meta"]);
+
+        return $return;
+    }
+
+    private function LOINCRetrieveAll($filter)
     {
         $dataReturned= [];
         $meta= [];
 
-        $client = new Client();
+        $this->getLOINCmeta($meta);
 
+        if ($meta!=[])
+        {
+            $tmpFilter= [];
+            foreach ($filter as $key=>$value)
+                $tmpFilter[]= "_".$key."=".$value;
+
+            $client = new Client();
+
+
+            $loincAPIUrlMeta= "https://fhir.loinc.org/ValueSet?".implode("&",$tmpFilter);
+
+
+            $response = $client->get($loincAPIUrlMeta,["auth"=>[env("USER_LOINC"),env("PASS_LOINC")],"header"=>["Accept"=>"application/json"]]);
+
+            if ($response->getStatusCode()==200)
+            {
+                $data= json_decode($response->getBody()->getContents());
+
+                $resultset= [];
+                foreach ($data->entry as $entry)
+                {
+                    foreach ($entry->resource->compose->include as $include)
+                    {
+                        foreach ($include->concept as $concept)
+                        {
+                            $url= array_values($meta)[0]["url"];
+                            $dataReturned[]= [
+                                "definition" => $concept->display,
+                                "value" => $concept->code,
+                                "name" => $concept->display,
+                                "source" => $url
+                            ];
+
+                        }
+                    }
+                }
+            }
+        }
+
+        return ["meta"=>$meta,
+            "data"=>$dataReturned];
+
+    }
+
+    private function getLOINCmeta(&$meta)
+    {
+        $client = new Client();
         $loincAPIUrlMeta= "https://fhir.loinc.org/CodeSystem/?url=http://loinc.org";
         $response = $client->get($loincAPIUrlMeta,["auth"=>[env("USER_LOINC"),env("PASS_LOINC")],"header"=>["Accept"=>"application/json"]]);
 
@@ -405,54 +631,67 @@ class FHIRValueSetController extends Controller
             ];
         }
 
+    }
 
-        $loincAPIUrl= "https://fhir.loinc.org/CodeSystem/\$lookup?system=http://loinc.org&code=";
+    private function LoincBasicAPISearch($codes)
+    {
+        $dataReturned= [];
+        $meta= [];
 
-        foreach ($codes as $code)
+        $this->getLOINCmeta($meta);
+
+        if ($meta!=[])
         {
-            // WRS must have it's own LOINC registered user
-            $response = $client->get($loincAPIUrl.$code,["auth"=>[env("USER_LOINC"),env("PASS_LOINC")]]);
+            $client = new Client();
+            $loincAPIUrl= "https://fhir.loinc.org/CodeSystem/\$lookup?system=http://loinc.org&code=";
 
-            if ($response->getStatusCode()==200)
+            foreach ($codes as $code)
             {
-                $data= json_decode($response->getBody()->getContents());
+                // WRS must have it's own LOINC registered user
+                $response = $client->get($loincAPIUrl.$code,["auth"=>[env("USER_LOINC"),env("PASS_LOINC")]]);
 
-                $resultset= [];
-                foreach ($data->parameter as $parameter)
+                if ($response->getStatusCode()==200)
                 {
-                    if (isset($parameter->valueString))
-                        $resultset[$parameter->name]= $parameter->valueString;
-                }
+                    $data= json_decode($response->getBody()->getContents());
 
-                $dataReturned[]= [
-                    "definition" => $resultset["display"],
-                    "value" => $resultset["display"],
-                    "name" => $resultset["display"],
-                    "source" => array_keys($meta)[0]
+                    $resultset= [];
+                    foreach ($data->parameter as $parameter)
+                    {
+                        if (isset($parameter->valueString))
+                            $resultset[$parameter->name]= $parameter->valueString;
+                    }
 
-                ];
-           }
+                    $dataReturned[]= [
+                        "definition" => $resultset["display"],
+                        "value" => $resultset["display"],
+                        "name" => $resultset["display"],
+                        "source" => array_keys($meta)[0]
+
+                    ];
+               }
+            }
         }
-
+        else
+            throw new Exception("Problem with LOINC");
 
         return ["meta"=>$meta,
             "data"=>$dataReturned];
 
     }
 
-    private function USCoreDiagnosticReportCategory($Term=null)
+    private final function USCoreDiagnosticReportCategory($Term=null)
     {
         return $this->LoincBasicAPISearch(["LP29684-5","LP29708-2","LP7839-6"]);
     }
 
-    private function CareTeamCategory($Term=null)
+    private final function CareTeamCategory($Term=null)
     {
         return $this->LoincBasicAPISearch(["LA27975-4","LA27976-2","LA27977-0","LA27978-8","LA28865-6","LA28866-4","LA27980-4","LA28867-2"]);
     }
 
 
     // PENDING
-    private function DetailedRace($Term=null) // PENDING
+    private final function DetailedRace($Term=null) // PENDING
     {
         $raceCategories= [];
         $meta= [];
@@ -575,7 +814,6 @@ class FHIRValueSetController extends Controller
                     return $this->findRecursiveElement($element->concept,$key,$value,$SourceID);
             }
         }
-
     }
 
     private function addCustomValues(&$SourceValues,$url,$customValues,$Term,&$Meta,$providedJSON=null)
@@ -632,8 +870,17 @@ class FHIRValueSetController extends Controller
 
     public function getMethods()
     {
-        $valueSets= new FHIRValueSet();
         $response= [];
+
+        $class = new ReflectionClass("App\\Http\\Controllers\\FHIRValueSetController");
+        $methods = $class->getMethods(ReflectionMethod::IS_FINAL);
+
+
+        // Check final methods that this class has, as they are the special cases outside the db
+        foreach ($methods as $method)
+            $response[]= $method->name;
+
+        $valueSets= new FHIRValueSet();
         foreach ($valueSets->all(["name"])->toArray() as $valueset)
             $response[]= $valueset["name"];
 

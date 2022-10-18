@@ -51,14 +51,12 @@ class FHIRValueSetSeeder extends Seeder
             "UDIEntryType"=>"https://build.fhir.org/codesystem-udi-entry-type.json",
             "DeviceNameType"=>"https://build.fhir.org/codesystem-device-nametype.json",
             "FHIRDeviceStatus"=>"https://build.fhir.org/codesystem-device-status.json",
-            "FHIRDeviceStatusReason"=>"https://fhir-ru.github.io/codesystem-device-status-reason.json",            "FHIRDeviceSpecializationCategory"=>"https://build.fhir.org/codesystem-device-specialization-category.json",
-//            "FHIRDeviceOperationalStatus"=>"https://build.fhir.org/codesystem-device-operationalstatus.json", // No funciona
+            "FHIRDeviceStatusReason"=>"https://fhir-ru.github.io/codesystem-device-status-reason.json",
+            "FHIRDeviceSpecializationCategory"=>"https://build.fhir.org/codesystem-device-specialization-category.json",
+            "FHIRDeviceOperationalStatus"=>"https://build.fhir.org/codesystem-metric-operational-status.json",
             "DeviceRelationType"=>"https://build.fhir.org/branches/master/codesystem-devicedefinition-relationtype.json", // No funciona
             "DiagnosticReportStatus"=>"https://build.fhir.org/codesystem-diagnostic-report-status.json",
             "USCoreProvenancePaticipantTypeCodes"=>["https://hl7.org/fhir/us/core/STU4/CodeSystem-us-core-provenance-participant-type.json","https://terminology.hl7.org/1.0.0//CodeSystem-provenance-participant-type.json"],
-
-
-
             "DocumentReferenceStatus"=>"https://build.fhir.org/codesystem-document-reference-status.json",
             "CompositionStatus"=>"https://build.fhir.org/codesystem-composition-status.json",
             "USCoreDocumentReferenceCategory"=>"https://hl7.org/fhir/us/core/STU4/CodeSystem-us-core-documentreference-category.json",
@@ -66,6 +64,7 @@ class FHIRValueSetSeeder extends Seeder
             "DocumentAttestationMode"=>"https://build.fhir.org/codesystem-composition-attestation-mode.json",
             "DocumentRelationshipType"=>"https://build.fhir.org/codesystem-document-relationship-type.json",
             "DocumentReferenceFormatCodeSet"=>"https://profiles.ihe.net/fhir/ihe.formatcode.fhir/1.1.0/CodeSystem-formatcode.json",
+            "GoalLifecycleStatus"=>"https://build.fhir.org/codesystem-goal-status.json",
             "GoalAchievementStatus"=>"https://terminology.hl7.org/3.1.0/CodeSystem-goal-achievement.json",
             "GoalCategory"=>"https://terminology.hl7.org/3.1.0/CodeSystem-goal-category.json",
             "GoalPriority"=>"https://terminology.hl7.org/3.1.0/CodeSystem-goal-priority.json",
@@ -78,6 +77,7 @@ class FHIRValueSetSeeder extends Seeder
             "medicationRequestAdministrationLocationCodes"=>"https://terminology.hl7.org/3.1.0/CodeSystem-medicationrequest-admin-location.json",
             "RequestPriority"=>"https://build.fhir.org/codesystem-request-priority.json",
             "MedicationIntendedPerformerRole"=>"https://build.fhir.org/codesystem-medication-intended-performer-role.json",
+            "medicationRequestCourseofTherapyCodes"=>"https://terminology.hl7.org/3.1.0/CodeSystem-medicationrequest-course-of-therapy.json",
             "DoseAndRateType"=>"https://build.fhir.org/codesystem-dose-rate-type.json",
             "MedicationDoseAids"=>"https://build.fhir.org/codesystem-medication-dose-aid.json",
             "MedicationStatusCodes"=>"https://build.fhir.org/codesystem-medication-status.json",
@@ -105,9 +105,12 @@ class FHIRValueSetSeeder extends Seeder
             "OrganizationType"=>"https://www.hl7.org/fhir/codesystem-organization-type.json",
             "ContactEntityType"=>"https://www.hl7.org/fhir/codesystem-contactentity-type.json",
             "v2Table0360Version2.7"=>"https://www.hl7.org/fhir/v2/0360/2.7/v2-0360-2.7.cs.json",
+            "CompositionAttestationMode"=>"https://build.fhir.org/codesystem-composition-attestation-mode.json",
+            "USCoreConditionCategoryCodes"=>"https://terminology.hl7.org/4.0.0/CodeSystem-condition-category.json",
+            "CarePlanActivityStatusReason"=>["https://terminology.hl7.org/3.1.0/CodeSystem-medicationrequest-status-reason.json",],
 
-            // Seguir
-            "CarePlanActivityStatusReason"=>["https://terminology.hl7.org/3.1.0/CodeSystem-medicationrequest-status-reason.json",]
+
+
         ];
 
 

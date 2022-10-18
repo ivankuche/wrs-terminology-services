@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\FHIRValueSetController;
 use App\Http\Controllers\SnomedCTController;
+use App\Http\Controllers\TerminologyServiceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -20,6 +21,9 @@ Route::get('/', function () {
 });
 
 Route::get('FHIRValueSet/methods',[FHIRValueSetController::class, 'getMethods']);
-Route::get('FHIRValueSet/{ValueSet}/{Term?}/{Sort?}',[FHIRValueSetController::class, 'getValueSet']);
-Route::get('SnomedCT/{ConceptGroup}/{Term?}/{Sort?}',[SnomedCTController::class, 'query']);
-Route::get('ValueSet/{ValueSet}/{Term?}/{Sort?}',[ValueSetController::class, 'getValueSet']);
+Route::get('FHIRValueSet/{ValueSet}/{Term?}/{Sort?}',[FHIRValueSetController::class, 'getResults']);
+Route::get('SnomedCT/methods',[SnomedCTController::class, 'getMethods']);
+Route::get('SnomedCT/{ConceptGroup}/{Term?}/{Sort?}',[SnomedCTController::class, 'getResults']);
+
+Route::get('TerminologyService/{ValueSet}/methods',[TerminologyServiceController::class, 'getMethods']);
+Route::get('TerminologyService/{ValueSet}/{Term?}/{Sort?}',[TerminologyServiceController::class, 'getValueSet']);
