@@ -273,10 +273,10 @@ class FHIRValueSetController extends Controller
 
 
 
-        return dd([
+        return [
             "meta"=>$meta,
             "data"=>$data,
-        ]);
+        ];
     }
 
 
@@ -306,10 +306,10 @@ class FHIRValueSetController extends Controller
             ["AP","OP"],
             null,
             $meta);
-        return dd([
+        return [
             "meta"=>$meta,
             "data"=>$data,
-        ]);
+        ];
     }
 
 

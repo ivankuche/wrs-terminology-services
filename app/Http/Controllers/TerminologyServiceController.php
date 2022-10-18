@@ -94,10 +94,10 @@ class TerminologyServiceController extends Controller
 //                $data[]= $tmp["data"];
                 $this->copyInnerArray($tmp["data"],$data,true);
             };
-            return dd([
+            return [
                 "meta"=>$meta,
                 "data"=>$data
-            ]);
+            ];
         }
         else
         {
